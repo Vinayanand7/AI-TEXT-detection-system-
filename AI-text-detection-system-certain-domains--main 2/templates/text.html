@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Text Analysis — DetectAI{% endblock %}
+ 
+{% block head %}
+<style>
+  .page-header {
+    padding: 2.8rem 2rem 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .page-header .breadcrumb {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+  }
+  .page-header .breadcrumb a { color: var(--muted); text-decoration: none; }
+  .page-header .breadcrumb a:hover { color: var(--accent); }
+  .page-header h1 { font-size: 1.6rem; font-weight: 600; margin-bottom: 6px; }
+  .page-header p { color: var(--muted); font-size: 0.9rem; }
+ 
+  .analysis-layout {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem 3rem;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 20px;
+    align-items: start;
+  }
+ 
+  @media (max-width: 700px) {
+    .analysis-layout { grid-template-columns: 1fr; }
+  }
+ 
+  .text-input-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+ 
+  .card-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+ 
+  .card-topbar-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+ 
+  .word-count {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+ 
+  .word-count span { color: var(--accent); }
+ 
+  .text-input-card textarea {
+    border: none;
+    border-radius: 0;
+    background: var(--card);
+    min-height: 320px;
+    padding: 1.2rem 1.4rem;
+    font-size: 0.92rem;
+    line-height: 1.75;
+    resize: vertical;
+  }
+ 
+  .text-input-card textarea:focus {
+    box-shadow: none;
+    border-color: transparent;
+  }
+ 
+  .card-footer {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+ 
+  .warning-msg {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--warn);
+    display: none;
+  }
+ 
+  .warning-msg.show { display: block; }
+ 
+  /* SIDE PANEL */
+  .side-panel { display: flex; flex-direction: column; gap: 16px; }
+ 
+  .info-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem;
+  }
+ 
+  .info-card h4 {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+ 
+  .pipeline-step {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .pipeline-step:last-child { margin-bottom: 0; }
+ 
+  .step-num {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: #000;
+    background: var(--accent);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+ 
+  .step-text { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+  .step-text strong { color: var(--text); font-weight: 500; }
+ 
+  .req-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; color: var(--muted); margin-bottom: 8px;
+  }
+  .req-item:last-child { margin-bottom: 0; }
+  .req-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .req-dot.ok { background: var(--accent); }
+ 
+  .spinner {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-primary.loading .spinner { display: block; }
+  .btn-primary.loading .btn-label { display: none; }
+</style>
+{% endblock %}
+ 
+{% block content %}
+<div class="page-header fade-in">
+  <div class="breadcrumb">
+    <a href="{{ url_for('home') }}">home</a> / text_analysis
+  </div>
+  <h1>Text Analysis</h1>
+  <p>Paste at least 40 words for a reliable detection score.</p>
+</div>
+ 
+<form method="POST" action="{{ url_for('analyze_text') }}" id="textForm">
+  <div class="analysis-layout">
+ 
+    <!-- Main input -->
+    <div class="fade-in-2">
+      <div class="text-input-card">
+        <div class="card-topbar">
+          <span class="card-topbar-label">INPUT_TEXT</span>
+          <span class="word-count"><span id="wc">0</span> words</span>
+        </div>
+        <textarea
+          name="text"
+          id="textInput"
+          placeholder="Paste your text here. The more content you provide, the more accurate the detection will be..."
+          required></textarea>
+        <div class="card-footer">
+          <span class="warning-msg" id="warnMsg">⚠ Need at least 40 words</span>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <div class="spinner"></div>
+            <span class="btn-label">Run Analysis →</span>
+          </button>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Side panel -->
+    <div class="side-panel fade-in-3">
+ 
+      <div class="info-card">
+        <h4>DETECTION PIPELINE</h4>
+        <div class="pipeline-step">
+          <div class="step-num">1</div>
+          <div class="step-text"><strong>RoBERTa Classifier</strong> — fine-tuned binary classifier (60% weight)</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-num">2</div>
+          <div class="step-text"><strong>GPT-2 Perplexity</strong> — low perplexity suggests AI origin (25%)</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>Stylometry</strong> — sentence variance and vocab richness (15%)</div>
+        </div>
+      </div>
+ 
+      <div class="info-card">
+        <h4>REQUIREMENTS</h4>
+        <div class="req-item"><div class="req-dot ok" id="dotWords"></div> Minimum 40 words</div>
+        <div class="req-item"><div class="req-dot ok"></div> English language text</div>
+        <div class="req-item"><div class="req-dot ok"></div> Plain text (no HTML)</div>
+      </div>
+ 
+    </div>
+ 
+  </div>
+</form>
+ 
+<script>
+  const textarea = document.getElementById('textInput');
+  const wcEl = document.getElementById('wc');
+  const warnMsg = document.getElementById('warnMsg');
+  const submitBtn = document.getElementById('submitBtn');
+  const dotWords = document.getElementById('dotWords');
+ 
+  textarea.addEventListener('input', () => {
+    const words = textarea.value.trim().split(/\s+/).filter(w => w).length;
+    wcEl.textContent = words;
+    const ok = words >= 40;
+    warnMsg.classList.toggle('show', !ok && words > 0);
+    dotWords.style.background = ok ? 'var(--accent)' : 'var(--border)';
+  });
+ 
+  document.getElementById('textForm').addEventListener('submit', (e) => {
+    const words = textarea.value.trim().split(/\s+/).filter(w => w).length;
+    if (words < 1) { e.preventDefault(); return; }
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+  });
+</script>
+{% endblock %}

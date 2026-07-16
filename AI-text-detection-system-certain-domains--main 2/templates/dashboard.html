@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}History — DetectAI{% endblock %}
+ 
+{% block head %}
+<style>
+  .page-header {
+    padding: 2.8rem 2rem 1.2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+ 
+  .page-header-left .breadcrumb {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.05em;
+  }
+  .page-header-left .breadcrumb a { color: var(--muted); text-decoration: none; }
+  .page-header-left .breadcrumb a:hover { color: var(--accent); }
+  .page-header-left h1 { font-size: 1.5rem; font-weight: 600; }
+ 
+  .dash-wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 2rem 4rem;
+  }
+ 
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--muted);
+  }
+  .empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; display: block; opacity: 0.5; }
+  .empty-state p { font-size: 0.9rem; margin-bottom: 1.6rem; }
+ 
+  /* History list */
+  .history-list { display: flex; flex-direction: column; gap: 12px; }
+ 
+  .history-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 16px;
+    transition: border-color .2s, transform .15s;
+    animation: fadeIn .4s ease both;
+  }
+ 
+  .history-item:hover {
+    border-color: rgba(0,229,160,0.2);
+    transform: translateX(2px);
+  }
+ 
+  .type-badge {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+ 
+  .type-badge.text { border-color: rgba(0,102,255,0.3); color: #6699ff; background: rgba(0,102,255,0.06); }
+  .type-badge.pdf  { border-color: rgba(255,170,0,0.3);  color: var(--warn);  background: rgba(255,170,0,0.06); }
+ 
+  .history-meta {
+    min-width: 0;
+  }
+ 
+  .history-time {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+ 
+  .history-user {
+    font-size: 0.85rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+ 
+  .history-score-wrap { text-align: right; min-width: 90px; }
+ 
+  .history-score {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+  .history-score.ai    { color: var(--danger); }
+  .history-score.mid   { color: var(--warn); }
+  .history-score.human { color: var(--accent); }
+ 
+  .history-verdict {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+ 
+  .conf-bar-wrap { width: 80px; }
+  .conf-label { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); margin-bottom: 4px; }
+  .conf-bar { height: 4px; background: var(--border); border-radius: 100px; overflow: hidden; }
+  .conf-fill { height: 100%; background: var(--accent2); border-radius: 100px; }
+ 
+  /* Summary bar */
+  .summary-bar {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 1.8rem;
+  }
+ 
+  .sum-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.4rem;
+    flex: 1; min-width: 120px;
+  }
+ 
+  .sum-label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 4px; }
+  .sum-value { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; color: var(--text); }
+ 
+  @media (max-width: 600px) {
+    .history-item { grid-template-columns: auto 1fr auto; }
+    .conf-bar-wrap { display: none; }
+  }
+</style>
+{% endblock %}
+ 
+{% block content %}
+ 
+<div class="page-header fade-in">
+  <div class="page-header-left">
+    <div class="breadcrumb"><a href="{{ url_for('home') }}">home</a> / history</div>
+    <h1>Analysis History</h1>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a href="{{ url_for('text_page') }}" class="btn btn-primary" style="font-size:0.8rem;padding:9px 18px;">+ Text</a>
+    <a href="{{ url_for('pdf_page') }}"  class="btn btn-outline"  style="font-size:0.8rem;padding:9px 18px;">+ PDF</a>
+  </div>
+</div>
+ 
+<div class="dash-wrap">
+ 
+  {% if data %}
+    <!-- Summary -->
+    {% set total = data | length %}
+    {% set text_count = data | selectattr('type', 'equalto', 'text') | list | length %}
+    {% set pdf_count  = data | selectattr('type', 'equalto', 'pdf')  | list | length %}
+ 
+    <div class="summary-bar fade-in-2">
+      <div class="sum-card">
+        <div class="sum-label">TOTAL RUNS</div>
+        <div class="sum-value">{{ total }}</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-label">TEXT ANALYSES</div>
+        <div class="sum-value">{{ text_count }}</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-label">PDF ANALYSES</div>
+        <div class="sum-value">{{ pdf_count }}</div>
+      </div>
+    </div>
+ 
+    <div class="history-list">
+      {% for item in data %}
+        {% set r = item.result %}
+        {% if r.type == 'text' %}
+          {% set score = r.final_score %}
+          {% set conf  = r.confidence %}
+          {% set score_pct = (score * 100) | round(1) %}
+          {% set conf_pct  = (conf  * 100) | round(1) %}
+        {% elif r.type == 'pdf' %}
+          {% set score = r.overall_ai / 100 %}
+          {% set score_pct = r.overall_ai | round(1) %}
+          {% set conf  = 0 %}
+          {% set conf_pct = 0 %}
+        {% else %}
+          {% set score = 0 %}
+          {% set score_pct = 0 %}
+          {% set conf_pct  = 0 %}
+        {% endif %}
+        {% set cls = 'ai' if score > 0.65 else ('mid' if score > 0.4 else 'human') %}
+ 
+        <div class="history-item" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+          <span class="type-badge {{ r.type }}">{{ r.type | upper }}</span>
+ 
+          <div class="history-meta">
+            <div class="history-time">{{ item.timestamp }}</div>
+            <div class="history-user">{{ item.user }}</div>
+          </div>
+ 
+          {% if r.type == 'text' %}
+          <div class="conf-bar-wrap">
+            <div class="conf-label">CONFIDENCE</div>
+            <div class="conf-bar"><div class="conf-fill" style="width:{{ conf_pct }}%"></div></div>
+          </div>
+          {% endif %}
+ 
+          <div class="history-score-wrap">
+            <div class="history-score {{ cls }}">{{ score_pct }}%</div>
+            <div class="history-verdict">
+              {{ 'AI' if cls == 'ai' else ('MIXED' if cls == 'mid' else 'HUMAN') }}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+ 
+  {% else %}
+    <div class="empty-state">
+      <span class="empty-icon">🔬</span>
+      <p>No analyses yet. Run your first detection to see results here.</p>
+      <a href="{{ url_for('home') }}" class="btn btn-primary">Get Started</a>
+    </div>
+  {% endif %}
+ 
+</div>
+{% endblock %}
