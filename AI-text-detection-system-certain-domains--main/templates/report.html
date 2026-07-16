@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+{% block title %}Report — DetectAI{% endblock %}
+ 
+{% block head %}
+<style>
+  .report-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2.8rem 2rem 4rem;
+  }
+ 
+  .report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 2.4rem;
+    flex-wrap: wrap;
+  }
+ 
+  .report-breadcrumb {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.05em;
+  }
+  .report-breadcrumb a { color: var(--muted); text-decoration: none; }
+  .report-breadcrumb a:hover { color: var(--accent); }
+ 
+  .report-title { font-size: 1.5rem; font-weight: 600; }
+  .report-meta {
+    display: flex; gap: 10px; align-items: center;
+    margin-top: 8px; flex-wrap: wrap;
+  }
+ 
+  /* ── SCORE HERO ── */
+  .score-hero {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.4rem;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2.4rem;
+    align-items: center;
+  }
+ 
+  @media (max-width: 600px) { .score-hero { grid-template-columns: 1fr; } }
+ 
+  .score-circle {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+ 
+  .score-circle svg {
+    position: absolute; inset: 0;
+    transform: rotate(-90deg);
+  }
+ 
+  .score-circle .track { fill: none; stroke: var(--border); stroke-width: 8; }
+  .score-circle .fill  { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1); }
+ 
+  .score-pct {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+  }
+ 
+  .score-sublabel {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    position: relative;
+    z-index: 1;
+    margin-top: 4px;
+  }
+ 
+  .score-details { display: flex; flex-direction: column; gap: 16px; }
+ 
+  .verdict-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 6px 16px;
+    border-radius: 100px;
+  }
+ 
+  .verdict-badge.ai    { background: rgba(255,68,102,0.12); color: var(--danger); border: 1px solid rgba(255,68,102,0.3); }
+  .verdict-badge.mid   { background: rgba(255,170,0,0.12);  color: var(--warn);   border: 1px solid rgba(255,170,0,0.3); }
+  .verdict-badge.human { background: rgba(0,229,160,0.10);  color: var(--accent); border: 1px solid rgba(0,229,160,0.3); }
+ 
+  .score-row {
+    display: flex; align-items: center; gap: 12px;
+  }
+ 
+  .score-row-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    width: 130px;
+    flex-shrink: 0;
+  }
+ 
+  .mini-bar {
+    flex: 1; height: 4px;
+    background: var(--border);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+ 
+  .mini-fill {
+    height: 100%;
+    border-radius: 100px;
+    background: var(--accent);
+    transition: width 1s .3s ease;
+  }
+ 
+  .score-row-val {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--text);
+    width: 48px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+ 
+  /* ── METRIC CARDS ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+ 
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+  }
+ 
+  .metric-label {
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+ 
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+ 
+  .metric-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+ 
+  /* ── PAGE TABLE (PDF) ── */
+  .section-title {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+ 
+  .pages-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+ 
+  .pages-table th {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-align: left;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+ 
+  .pages-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(37,42,54,0.5);
+    color: var(--text);
+  }
+ 
+  .pages-table tr:last-child td { border-bottom: none; }
+  .pages-table tr:hover td { background: rgba(255,255,255,0.02); }
+ 
+  .pages-table .score-cell {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+  }
+ 
+  .score-pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 2px 10px;
+    border-radius: 100px;
+  }
+  .score-pill.ai    { background: rgba(255,68,102,0.15); color: var(--danger); }
+  .score-pill.mid   { background: rgba(255,170,0,0.15);  color: var(--warn); }
+  .score-pill.human { background: rgba(0,229,160,0.1);  color: var(--accent); }
+ 
+  /* ── ACTIONS ── */
+  .report-actions {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    margin-top: 24px;
+  }
+ 
+  .table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+ 
+  .table-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+ 
+  .download-group {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .download-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  .theme-btns { display: flex; gap: 6px; }
+  .theme-btn {
+    padding: 8px 16px;
+    font-size: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    text-decoration: none;
+    font-family: var(--mono);
+    transition: all .2s;
+  }
+  .theme-dark:hover  { border-color: #00e5a0; color: #00e5a0; }
+  .theme-light:hover { border-color: #e0e0e0; color: #e8eaf0; background: #2a2f3a; }
+  .theme-ocean:hover { border-color: #00b4d8; color: #00b4d8; }
+</style>
+{% endblock %}
+ 
+{% block content %}
+<div class="report-wrap fade-in">
+ 
+  <div class="report-header">
+    <div>
+      <div class="report-breadcrumb">
+        <a href="{{ url_for('home') }}">home</a> /
+        {% if result.type == 'text' %}
+          <a href="{{ url_for('text_page') }}">text_analysis</a>
+        {% else %}
+          <a href="{{ url_for('pdf_page') }}">pdf_analysis</a>
+        {% endif %}
+        / report
+      </div>
+      <div class="report-title">Detection Report</div>
+      <div class="report-meta">
+        <span class="tag">{{ result.type | upper }}</span>
+        <span class="tag">{{ session['user'] }}</span>
+      </div>
+    </div>
+  </div>
+ 
+  {# ─────── TEXT REPORT ─────── #}
+  {% if result.type == 'text' %}
+    {% set score_pct = (result.final_score * 100) | round(1) %}
+    {% set conf_pct  = (result.confidence * 100)  | round(1) %}
+    {% set cls = 'ai' if result.final_score > 0.65 else ('mid' if result.final_score > 0.4 else 'human') %}
+ 
+    <div class="score-hero fade-in-2">
+      <div class="score-circle" id="scoreCircle">
+        <svg viewBox="0 0 140 140" width="140" height="140">
+          <circle class="track" cx="70" cy="70" r="58"/>
+          <circle class="fill {{ cls }}" cx="70" cy="70" r="58"
+            id="scoreArc"
+            stroke-dasharray="364.4"
+            stroke-dashoffset="364.4"
+            {% if cls == 'ai'    %}stroke="var(--danger)"{% endif %}
+            {% if cls == 'mid'   %}stroke="var(--warn)"{% endif %}
+            {% if cls == 'human' %}stroke="var(--accent)"{% endif %}
+          />
+        </svg>
+        <span class="score-pct {{ cls }}">{{ score_pct }}%</span>
+        <span class="score-sublabel">AI SCORE</span>
+      </div>
+ 
+      <div class="score-details">
+        <div>
+          <span class="verdict-badge {{ cls }}">
+            {% if cls == 'ai' %}⚠ Likely AI-Generated
+            {% elif cls == 'mid' %}◐ Uncertain
+            {% else %}✓ Likely Human-Written{% endif %}
+          </span>
+        </div>
+ 
+        <div class="score-row">
+          <span class="score-row-label">CLASSIFIER</span>
+          <div class="mini-bar"><div class="mini-fill" style="width:{{ (result.details.classifier_score * 100) | round(1) }}%; background: {% if cls == 'ai' %}var(--danger){% elif cls == 'mid' %}var(--warn){% else %}var(--accent){% endif %}"></div></div>
+          <span class="score-row-val">{{ (result.details.classifier_score * 100) | round(1) }}%</span>
+        </div>
+ 
+        <div class="score-row">
+          <span class="score-row-label">PERPLEXITY SCORE</span>
+          <div class="mini-bar"><div class="mini-fill" style="width:{{ (result.details.perplexity_score * 100) | round(1) }}%"></div></div>
+          <span class="score-row-val">{{ (result.details.perplexity_score * 100) | round(1) }}%</span>
+        </div>
+ 
+        <div class="score-row">
+          <span class="score-row-label">STYLOMETRY</span>
+          <div class="mini-bar"><div class="mini-fill" style="width:{{ (result.details.stylometry_score * 100) | round(1) }}%"></div></div>
+          <span class="score-row-val">{{ (result.details.stylometry_score * 100) | round(1) }}%</span>
+        </div>
+ 
+        <div class="score-row">
+          <span class="score-row-label">CONFIDENCE</span>
+          <div class="mini-bar"><div class="mini-fill" style="width:{{ conf_pct }}%; background: var(--accent2)"></div></div>
+          <span class="score-row-val">{{ conf_pct }}%</span>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Detail metrics -->
+    <div class="metrics-grid fade-in-3">
+      <div class="metric-card">
+        <div class="metric-label">PERPLEXITY</div>
+        <div class="metric-value">{{ result.details.perplexity | round(1) }}</div>
+        <div class="metric-sub">raw GPT-2 value</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">CHUNKS ANALYZED</div>
+        <div class="metric-value">{{ result.details.num_chunks }}</div>
+        <div class="metric-sub">120-word windows</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">CONFIDENCE</div>
+        <div class="metric-value">{{ conf_pct }}%</div>
+        <div class="metric-sub">detection certainty</div>
+      </div>
+    </div>
+ 
+  {# ─────── PDF REPORT ─────── #}
+  {% elif result.type == 'pdf' %}
+    {% set overall = result.overall_ai | round(1) %}
+    {% set cls = 'ai' if overall > 65 else ('mid' if overall > 40 else 'human') %}
+ 
+    <div class="score-hero fade-in-2">
+      <div class="score-circle" id="scoreCircle">
+        <svg viewBox="0 0 140 140" width="140" height="140">
+          <circle class="track" cx="70" cy="70" r="58"/>
+          <circle class="fill {{ cls }}" cx="70" cy="70" r="58"
+            id="scoreArc"
+            stroke-dasharray="364.4"
+            stroke-dashoffset="364.4"
+            {% if cls == 'ai'    %}stroke="var(--danger)"{% endif %}
+            {% if cls == 'mid'   %}stroke="var(--warn)"{% endif %}
+            {% if cls == 'human' %}stroke="var(--accent)"{% endif %}
+          />
+        </svg>
+        <span class="score-pct {{ cls }}">{{ overall }}%</span>
+        <span class="score-sublabel">AI LIKELIHOOD</span>
+      </div>
+ 
+      <div class="score-details">
+        <div>
+          <span class="verdict-badge {{ cls }}">
+            {% if cls == 'ai' %}⚠ Likely AI-Generated
+            {% elif cls == 'mid' %}◐ Uncertain
+            {% else %}✓ Likely Human-Written{% endif %}
+          </span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--muted);">
+          <strong style="color:var(--text);">{{ result.pages | length }}</strong> pages analyzed.
+          Score weighted by word count per page.
+        </div>
+        {% if result.top_pages %}
+          <div style="font-size:0.85rem;color:var(--muted);">
+            Highest scoring pages:
+            {% for p in result.top_pages %}
+              <span class="tag" style="margin:2px;">Page {{ p.page }} — {{ (p.final_score * 100) | round(1) }}%</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+ 
+    <!-- All pages table -->
+    {% if result.pages %}
+    <div class="table-wrap fade-in-3">
+      <div class="table-head">
+        <span class="section-title">ALL PAGES</span>
+      </div>
+      <table class="pages-table">
+        <thead>
+          <tr>
+            <th>PAGE</th>
+            <th>AI SCORE</th>
+            <th>CONFIDENCE</th>
+            <th>WORDS</th>
+            <th>VERDICT</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in result.pages %}
+            {% set pct = (p.final_score * 100) | round(1) %}
+            {% set pcls = 'ai' if p.final_score > 0.65 else ('mid' if p.final_score > 0.4 else 'human') %}
+            <tr>
+              <td><span style="font-family:var(--mono);">{{ p.page }}</span></td>
+              <td class="score-cell">{{ pct }}%</td>
+              <td class="score-cell">{{ (p.confidence * 100) | round(1) }}%</td>
+              <td class="score-cell">{{ p.word_count }}</td>
+              <td>
+                <span class="score-pill {{ pcls }}">
+                  {{ 'AI' if pcls == 'ai' else ('Mixed' if pcls == 'mid' else 'Human') }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+ 
+  {% endif %}
+ 
+  <!-- Actions -->
+  <div class="report-actions fade-in-3">
+    <div class="download-group">
+      <span class="download-label">⬇ Download Report</span>
+      <div class="theme-btns">
+        <a href="{{ url_for('download_report') }}?theme=dark"  class="btn theme-btn theme-dark">Dark</a>
+        <a href="{{ url_for('download_report') }}?theme=light" class="btn theme-btn theme-light">Light</a>
+        <a href="{{ url_for('download_report') }}?theme=ocean" class="btn theme-btn theme-ocean">Ocean</a>
+      </div>
+    </div>
+    {% if result.type == 'text' %}
+      <a href="{{ url_for('text_page') }}" class="btn btn-outline">← New Text Analysis</a>
+    {% else %}
+      <a href="{{ url_for('pdf_page') }}" class="btn btn-outline">← New PDF Analysis</a>
+    {% endif %}
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">View History</a>
+  </div>
+ 
+</div>
+ 
+<script>
+  // Animate the circle arc
+  window.addEventListener('load', () => {
+    const arc = document.getElementById('scoreArc');
+    if (!arc) return;
+ 
+    const total = 364.4;
+    {% if result.type == 'text' %}
+      const pct = {{ result.final_score }};
+    {% elif result.type == 'pdf' %}
+      const pct = {{ result.overall_ai / 100 }};
+    {% else %}
+      const pct = 0;
+    {% endif %}
+ 
+    const offset = total - (total * pct);
+    setTimeout(() => { arc.style.strokeDashoffset = offset; }, 100);
+  });
+</script>
+{% endblock %}

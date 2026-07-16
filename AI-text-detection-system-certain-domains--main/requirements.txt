@@ -1,0 +1,12 @@
+Flask
+transformers
+torch
+numpy
+pandas
+scikit-learn
+nltk
+textstat
+sentencepiece
+accelerate
+matplotlib
+seaborn

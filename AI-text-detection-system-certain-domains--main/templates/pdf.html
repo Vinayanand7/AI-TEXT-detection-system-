@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}PDF Analysis — DetectAI{% endblock %}
+ 
+{% block head %}
+<style>
+  .page-header {
+    padding: 2.8rem 2rem 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .page-header .breadcrumb {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+  }
+  .page-header .breadcrumb a { color: var(--muted); text-decoration: none; }
+  .page-header .breadcrumb a:hover { color: var(--accent); }
+  .page-header h1 { font-size: 1.6rem; font-weight: 600; margin-bottom: 6px; }
+  .page-header p { color: var(--muted); font-size: 0.9rem; }
+ 
+  .analysis-layout {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem 3rem;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 20px;
+    align-items: start;
+  }
+ 
+  @media (max-width: 700px) {
+    .analysis-layout { grid-template-columns: 1fr; }
+  }
+ 
+  .pdf-input-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+ 
+  .card-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+ 
+  .card-topbar-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+ 
+  .card-body { padding: 1.6rem; }
+ 
+  .path-field {
+    display: flex; align-items: center; gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+  }
+ 
+  .path-field:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,160,0.08);
+  }
+ 
+  .path-prefix {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 12px 14px;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+    user-select: none;
+  }
+ 
+  .path-field input {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    padding: 12px 14px;
+    flex: 1;
+  }
+ 
+  .path-field input:focus { box-shadow: none; }
+ 
+  .path-hint {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 10px;
+    display: flex; gap: 6px; align-items: center;
+  }
+ 
+  .path-example {
+    margin-top: 1.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+  }
+ 
+  .path-example .ex-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+ 
+  .path-example code {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    display: block;
+    line-height: 1.8;
+  }
+ 
+  .card-footer {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+ 
+  .validation-msg {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+ 
+  .validation-msg.error { color: var(--danger); }
+ 
+  /* Side */
+  .side-panel { display: flex; flex-direction: column; gap: 16px; }
+ 
+  .info-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem;
+  }
+ 
+  .info-card h4 {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+ 
+  .info-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 10px;
+    font-size: 0.83rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .info-row strong { color: var(--text); font-weight: 500; }
+  .info-row:last-child { margin-bottom: 0; }
+ 
+  .info-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+ 
+  .spinner {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-primary.loading .spinner { display: block; }
+  .btn-primary.loading .btn-label { display: none; }
+</style>
+{% endblock %}
+ 
+{% block content %}
+<div class="page-header fade-in">
+  <div class="breadcrumb">
+    <a href="{{ url_for('home') }}">home</a> / pdf_analysis
+  </div>
+  <h1>PDF Analysis</h1>
+  <p>Provide the local file path to your PDF. We'll analyze each page individually.</p>
+</div>
+ 
+<form method="POST" action="{{ url_for('analyze_pdf_local') }}" id="pdfForm">
+  <div class="analysis-layout">
+ 
+    <div class="fade-in-2">
+      <div class="pdf-input-card">
+        <div class="card-topbar">
+          <span class="card-topbar-label">PDF_FILE_PATH</span>
+          <span style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);">.pdf only</span>
+        </div>
+ 
+        <div class="card-body">
+          <div class="path-field">
+            <span class="path-prefix">path://</span>
+            <input
+              type="text"
+              name="pdf_path"
+              id="pdfPath"
+              placeholder="C:\Users\you\docs\paper.pdf"
+              required
+            />
+          </div>
+          <div class="path-hint">
+            <span>ℹ</span>
+            <span>Enter the absolute path to a PDF file on this server.</span>
+          </div>
+ 
+          <div class="path-example">
+            <div class="ex-label">EXAMPLES</div>
+            <code>/home/user/documents/essay.pdf</code>
+            <code>C:\Users\user\Downloads\report.pdf</code>
+          </div>
+        </div>
+ 
+        <div class="card-footer">
+          <div class="validation-msg" id="valMsg">Enter a .pdf file path</div>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <div class="spinner"></div>
+            <span class="btn-label">Analyze PDF →</span>
+          </button>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- Side panel -->
+    <div class="side-panel fade-in-3">
+ 
+      <div class="info-card">
+        <h4>HOW IT WORKS</h4>
+        <div class="info-row">
+          <span class="info-icon">📖</span>
+          <span><strong>Page extraction</strong> — text is extracted from each page using PyMuPDF</span>
+        </div>
+        <div class="info-row">
+          <span class="info-icon">🔬</span>
+          <span><strong>Per-page scoring</strong> — each page is analyzed through the full pipeline</span>
+        </div>
+        <div class="info-row">
+          <span class="info-icon">⚖️</span>
+          <span><strong>Weighted average</strong> — final score is weighted by page word count</span>
+        </div>
+        <div class="info-row">
+          <span class="info-icon">🏆</span>
+          <span><strong>Top pages</strong> — highest-scoring pages flagged for review</span>
+        </div>
+      </div>
+ 
+      <div class="info-card">
+        <h4>NOTES</h4>
+        <div class="info-row">
+          <span class="info-icon">⚠️</span>
+          <span>Scanned PDFs (image-only) cannot be analyzed — text must be extractable.</span>
+        </div>
+        <div class="info-row">
+          <span class="info-icon">📏</span>
+          <span>Pages with fewer than 10 words are skipped automatically.</span>
+        </div>
+      </div>
+ 
+    </div>
+ 
+  </div>
+</form>
+ 
+<script>
+  const pathInput = document.getElementById('pdfPath');
+  const valMsg = document.getElementById('valMsg');
+  const submitBtn = document.getElementById('submitBtn');
+ 
+  pathInput.addEventListener('input', () => {
+    const v = pathInput.value.trim();
+    const isPdf = v.toLowerCase().endsWith('.pdf');
+    valMsg.textContent = v.length === 0 ? 'Enter a .pdf file path'
+      : isPdf ? '✓ Looks like a PDF path'
+      : '✗ Path must end with .pdf';
+    valMsg.className = 'validation-msg' + (!isPdf && v.length > 0 ? ' error' : '');
+  });
+ 
+  document.getElementById('pdfForm').addEventListener('submit', (e) => {
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+  });
+</script>
+{% endblock %}

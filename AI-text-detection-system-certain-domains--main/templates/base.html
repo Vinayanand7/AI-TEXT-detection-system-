@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}DetectAI{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #111318;
+      --card:      #181c24;
+      --border:    #252a36;
+      --accent:    #00e5a0;
+      --accent2:   #0066ff;
+      --danger:    #ff4466;
+      --warn:      #ffaa00;
+      --text:      #e8eaf0;
+      --muted:     #6b7280;
+      --mono:      'Space Mono', monospace;
+      --sans:      'DM Sans', sans-serif;
+      --radius:    10px;
+      --glow:      0 0 24px rgba(0,229,160,0.15);
+    }
+ 
+    html { scroll-behavior: smooth; }
+ 
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+ 
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,12,16,0.85);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 58px;
+    }
+ 
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo span.bracket { color: var(--muted); }
+ 
+    .nav-links { display: flex; align-items: center; gap: 6px; }
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      letter-spacing: 0.04em;
+      transition: all .2s;
+    }
+    .nav-links a:hover { color: var(--accent); border-color: var(--border); }
+    .nav-links a.active { color: var(--accent); border-color: rgba(0,229,160,0.3); background: rgba(0,229,160,0.06); }
+    .nav-links a.btn-logout {
+      color: var(--danger); border-color: rgba(255,68,102,0.25);
+    }
+    .nav-links a.btn-logout:hover { background: rgba(255,68,102,0.08); }
+ 
+    /* ── MAIN CONTENT ── */
+    main { flex: 1; }
+ 
+    /* ── FLASH MESSAGES ── */
+    .flash-wrap { padding: 0.6rem 2rem 0; }
+    .flash {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-family: var(--mono);
+      margin-bottom: 8px;
+      animation: fadeSlide .3s ease;
+    }
+    .flash.success { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.25); color: var(--accent); }
+    .flash.error   { background: rgba(255,68,102,0.08); border: 1px solid rgba(255,68,102,0.25); color: var(--danger); }
+ 
+    /* ── SHARED COMPONENTS ── */
+    .container { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem; }
+    .container-lg { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; }
+ 
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 2rem;
+    }
+ 
+    .label {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+ 
+    /* ── FORM ELEMENTS ── */
+    .form-group { margin-bottom: 1.4rem; }
+    .form-group label { display: block; margin-bottom: 6px; font-size: 0.82rem; color: var(--muted); font-family: var(--mono); letter-spacing: 0.05em; }
+    input[type="text"], input[type="password"], input[type="email"], textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,160,0.08);
+    }
+    textarea { resize: vertical; min-height: 180px; line-height: 1.7; }
+ 
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 24px;
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover { background: #00ffb3; box-shadow: var(--glow); transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(0,229,160,0.35);
+    }
+    .btn-outline:hover { background: rgba(0,229,160,0.06); }
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid rgba(255,68,102,0.35);
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+ 
+    /* ── TAG ── */
+    .tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+ 
+    /* ── SCORE GAUGE ── */
+    .gauge-wrap { text-align: center; }
+    .gauge-label { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 8px; }
+    .gauge-value { font-family: var(--mono); font-size: 2.8rem; font-weight: 700; line-height: 1; }
+    .gauge-value.ai   { color: var(--danger); }
+    .gauge-value.mid  { color: var(--warn); }
+    .gauge-value.human{ color: var(--accent); }
+    .gauge-bar {
+      height: 6px; background: var(--border); border-radius: 100px;
+      overflow: hidden; margin-top: 12px;
+    }
+    .gauge-fill {
+      height: 100%; border-radius: 100px;
+      transition: width 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    .gauge-fill.ai    { background: var(--danger); }
+    .gauge-fill.mid   { background: var(--warn); }
+    .gauge-fill.human { background: var(--accent); }
+ 
+    /* ── ANIMATIONS ── */
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn .5s ease both; }
+    .fade-in-2 { animation: fadeIn .5s .1s ease both; }
+    .fade-in-3 { animation: fadeIn .5s .2s ease both; }
+ 
+    /* ── NOISE TEXTURE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+ 
+{% if session.get('user') %}
+<nav>
+  <a href="{{ url_for('home') }}" class="nav-logo">
+    <span class="bracket">[</span>DetectAI<span class="bracket">]</span>
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('home') }}" {% if request.endpoint == 'home' %}class="active"{% endif %}>Home</a>
+    <a href="{{ url_for('text_page') }}" {% if request.endpoint == 'text_page' %}class="active"{% endif %}>Text</a>
+    <a href="{{ url_for('pdf_page') }}" {% if request.endpoint == 'pdf_page' %}class="active"{% endif %}>PDF</a>
+    <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>History</a>
+    <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+  </div>
+</nav>
+{% endif %}
+ 
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">
+          <span>{{ '✓' if category == 'success' else '✗' }}</span>
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+ 
+<main>
+  {% block content %}{% endblock %}
+</main>
+ 
+</body>
+</html>
+ 
