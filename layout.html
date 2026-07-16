@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Detector</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body id="body">
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <h2>AI Detector</h2>
+
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('text_page') }}">Text Analysis</a>
+        <a href="{{ url_for('pdf_page') }}">PDF Analysis</a>
+
+        <button onclick="toggleTheme()">Toggle Theme</button>
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+</body>
+</html>
